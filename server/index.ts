@@ -1,42 +1,83 @@
 import express from 'express'
 import http from 'http'
-import { Server } from 'socket.io'
+import { Server, Socket } from 'socket.io'
+import path from 'path'
 
-const app: express.Application = express()
-const server: http.Server = http.createServer(app)
-const io: Server = new Server(server)
+const app = express()
+const server = http.createServer(app)
+const io = new Server(server)
+const port: number = 3000
 
 app.get('/', (_req, res) => {
-//   res.send('<h1>Hello world</h1>')
   res.sendFile(__dirname + '/index.html')
 })
 
+server.listen(port, () => {
+    console.log(`Server listening at port ${port}`)
+  })
+
+// app.use(express.static(path.join(__dirname, 'public')))
+
 const connectMsg: string = 'a user connected'
 
-io.on('connection', (socket) => {
-    console.log('a user connected')
-    io.emit('connection', 'a user connected')    
+interface ExtendedSocket extends Socket {
+    username: string,
+    message: string
+}
+
+let numUsers: number = 0
+
+io.on('connection', (socket) => {   
+    const mySocket = <ExtendedSocket>socket
+    let addedUser: boolean = false
+
+    mySocket.on('chat message', (data) => {
+        // io.emit('chat message', data)
+        
+        io.emit('chat message', {
+            username: mySocket.username,
+            message: data
+        })
+        
+    })
     
-    socket.on('disconnect', () => {        
-        if (socket.disconnect(true)) {            
+    mySocket.on('add user', (username: string) => {
+        if (addedUser) return;
+
+        mySocket.username = username;
+        ++numUsers
+        addedUser = true
+        mySocket.emit('login', {
+            numUsers: numUsers
+        })
+
+        io.emit('user joined', {
+            username: mySocket.username,
+            numUsers: numUsers
+        })
+    })
+
+    // io.emit('connection', 'a user connected')
+
+    mySocket.on('disconnect', () => {
+        if (mySocket.disconnect(true)) {
             io.emit('disconnection', 'user disconnected')
         }
     })
-    socket.on('chat message', (msg) => {
-        io.emit('chat message', msg)
-        // console.log('message: ' + msg)    
-    })
+
+
+
+
+
+    
     // socket.broadcast.emit('hi')
 })
 
 // io.emit(
-//     'some event', 
-//     { 
+//     'some event',
+//     {
 //         someProperty: 'some value',
-//         otherProperty: 'other value' 
+//         otherProperty: 'other value'
 //     }
 // ); // This will emit the event to all connected sockets
 
-server.listen(3000, () => {
-  console.log('listening on *:3000')
-})

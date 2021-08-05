@@ -76,12 +76,20 @@
     window.scrollTo(0, document.body.scrollHeight);
   });
 
-  socket.on('chat message', function(msg) {
+  socket.on('chat message', function(data) {
     const item = document.createElement('li');
-    item.textContent = msg;
+    item.textContent = `${data.username}: ${data.message}`;
+    // console.log(data)
     messages.appendChild(item);
     window.scrollTo(0, document.body.scrollHeight);
   });
+
+  socket.on('user joined', (data) => {
+    const item = document.createElement('li');
+    item.textContent = `${data.username} connected`;
+    messages.appendChild(item);
+    window.scrollTo(0, document.body.scrollHeight);
+  })
   
   
 
